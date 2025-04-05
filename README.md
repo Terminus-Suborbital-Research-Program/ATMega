@@ -1,7 +1,7 @@
-attest2
+ATMega
 =======
 
-Rust project for the _Arduino Mega 2560_.
+Readme info from avr-hal setup below:
 
 ## Build Instructions
 1. Install prerequisites as described in the [`avr-hal` README] (`avr-gcc`, `avr-libc`, `avrdude`, [`ravedude`]).
