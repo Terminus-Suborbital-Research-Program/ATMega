@@ -44,6 +44,16 @@ mod i2c_slave;
 
 static TWI_INT_FLAG: AtomicBool = AtomicBool::new(false);
 
+
+fn delay_ms(ms: u16) {
+    Delay::new().delay_ms(u32::from(ms))
+}
+
+#[allow(dead_code)]
+fn delay_us(us: u32) {
+    Delay::new().delay_us(us)
+}
+
 // I2C interrupt handler
 #[avr_device::interrupt(atmega2560)]
 fn TWI() {
@@ -100,17 +110,8 @@ fn main() -> ! {
     let mut led = pins.pb7.into_output();
 
 
-    // let TE_1 = pins.pa4.into_floating_input();
-    // let GSE_1 = pins.pa0.into_floating_input();
-    let pin_set = [
-        pins.pa0.into_floating_input().downgrade(),
-        pins.pa1.into_floating_input().downgrade(),
-        pins.pa2.into_floating_input().downgrade(),
-        pins.pa3.into_floating_input().downgrade(),
-        pins.pa4.into_floating_input().downgrade(),
-        pins.pa5.into_floating_input().downgrade(),
-        pins.pa6.into_floating_input().downgrade(),
-    ];
+    let TE_1 = pins.pa4.into_floating_input();
+    let GSE_1 = pins.pa0.into_floating_input();
 
 
     //let mut pin_state = PinState::new(pin_set);
@@ -143,58 +144,41 @@ fn main() -> ! {
 
     let mut byte = 0b0000_0000u8;
 
-    let setter = 0b0000_0001;
-    let mut pin_state = PinState::new(&pin_set);
     loop {
         let mut write_buf: [u8; 1] = [0u8; 1];
 
-        pin_state.update(&pin_set);
-
-        // byte &= !0b0000_0011;
-        // byte &= 0b1111_1100;
-
-        if pin_state.gse_1 {
-            // byte |=  0b0000_0001;
-            byte |=  setter;
+        byte &= 0b0000_0011;
+       
+        if TE_1.is_high() {
+            byte |= 0b0000_0010;
         }
-        if pin_state.gse_2 {
-            // byte |=  0b0000_0010;
-            byte |=  setter << 1;
+        if GSE_1.is_high() {
+            byte |=  0b0000_0001;
         }
-        if pin_state.te_ra {
-            // byte |= 0b0000_0100;
-            byte |= setter << 2;
-        }
-        if pin_state.te_rb {
-            // byte |= 0b0000_1000;
-            byte |= setter << 3;
-        }
-        if pin_state.te_1 {
-            // byte |= 0b0001_0000;
-            byte |= setter << 4;
-        }
-        if pin_state.te_2 {
-            // byte |= 0b0010_0000;
-            byte |= setter << 5;
-        }
-        if pin_state.te_3 {
-            // byte |= 0b0100_0000;
-            byte |= setter << 6;
-        }
-        
-        
 
         write_buf[0] = byte;
 
         match i2c_slave.respond(&write_buf) {
             Ok(bytes_sent) => {
-                uwriteln!(serial,"{} bytes sent", bytes_sent).ok();
+                uwriteln!(serial,"{} bytes sent", bytes_sent).ok()
             }
                     
             Err(err) => {
-                uwriteln!(serial, "response_error").ok();
+                uwriteln!(serial, "response_error").ok()
             }
         }
 
     }
 }
+
+
+// #[avr_device::interrupt(atmega2560)]
+// fn TIMER1_COMPA() {
+//     let state = unsafe {
+//         // SAFETY: We _know_ that interrupts will only be enabled after the LED global was
+//         // initialized so this ISR will never run when LED is uninitialized.
+//         &mut *INTERRUPT_STATE.as_mut_ptr()
+//     };
+
+//     state.blinker.toggle();
+// }
